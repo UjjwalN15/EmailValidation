@@ -21,4 +21,5 @@ from base.views import *
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('register/',register, name='register'),
+    path('verify/', VerifyOTP.as_view())
 ]

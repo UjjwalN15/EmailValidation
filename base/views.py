@@ -1,13 +1,16 @@
 # views.py
 from django.shortcuts import render
 from rest_framework.response import Response
-from .serializers import UserSerializer
+from .serializers import UserSerializer, VerifyAccountSerializer
 from rest_framework.permissions import AllowAny
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from django.core.exceptions import ValidationError
 from .validators import validate_password
 from .models import User
+from .emails import send_otp_for_verification_email
+from rest_framework.views import APIView
+
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -24,9 +27,51 @@ def register(request):
             validate_password(password)
             # Save the user instance
             user = serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            send_otp_for_verification_email(serializer.data['email'])
+            return Response({'message': 'Registration Successful. Please Check your email for Email Validation OTP'}, status=status.HTTP_201_CREATED)
         except ValidationError as e:
             # If password validation fails, return the errors
             return Response({'password': e.messages}, status=status.HTTP_400_BAD_REQUEST)
     else:
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class VerifyOTP(APIView):
+    def  post(self, request):
+        try:
+            data = request.data
+            serializer = VerifyAccountSerializer(data=data)
+            
+            if serializer.is_valid():
+                email = serializer.data['email']
+                otp_email = serializer.data['otp_email']
+                
+                user = User.objects.filter(email=email)
+                if not user.exists():
+                    return Response({
+                        'status': 400,
+                        'message': 'User not found',
+                        'data': 'Invalid email'
+                    })
+                if not user[0].otp_email == otp_email:
+                    return Response({
+                        'status': 400,
+                        'message': 'Invalid OTP',
+                        'data': 'Invalid OTP'
+                    })
+                
+                user = user.first()
+                user.is_email_verified = True
+                user.save()
+                
+                return Response({
+                    'status':200,
+                    'message':'Account Verified',
+                    'data': {}
+                })
+            return Response({
+                'status':400,
+                'message': 'Something went wrong',
+                'data': serializer.errors
+            })
+        except Exception as e:
+            print(e)

@@ -10,7 +10,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('email', 'password', 'first_name', 'last_name', 'name', 'age', 'gender', 'address', 'phone', 'is_verified')
+        fields = ('email', 'password', 'first_name', 'last_name', 'name', 'age', 'gender', 'address', 'phone', 'is_email_verified')
 
     def validate_password(self, value):
         try:
@@ -21,3 +21,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         return User.objects.create_user(**validated_data)
+    
+class VerifyAccountSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    otp = serializers.CharField()
