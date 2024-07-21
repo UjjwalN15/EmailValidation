@@ -34,44 +34,57 @@ def register(request):
             return Response({'password': e.messages}, status=status.HTTP_400_BAD_REQUEST)
     else:
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 class VerifyOTP(APIView):
-    def  post(self, request):
+    def post(self, request):
         try:
             data = request.data
             serializer = VerifyAccountSerializer(data=data)
             
             if serializer.is_valid():
-                email = serializer.data['email']
-                otp_email = serializer.data['otp_email']
+                email = serializer.validated_data.get('email')
+                otp = serializer.validated_data.get('otp')
                 
                 user = User.objects.filter(email=email)
                 if not user.exists():
                     return Response({
                         'status': 400,
                         'message': 'User not found',
-                        'data': 'Invalid email'
-                    })
-                if not user[0].otp_email == otp_email:
+                        'data': 'Invalid email address provided.'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                
+                if user[0].otp != otp:
                     return Response({
                         'status': 400,
                         'message': 'Invalid OTP',
-                        'data': 'Invalid OTP'
-                    })
+                        'data': 'The OTP you entered is incorrect.'
+                    }, status=status.HTTP_400_BAD_REQUEST)
                 
                 user = user.first()
                 user.is_email_verified = True
                 user.save()
                 
                 return Response({
-                    'status':200,
-                    'message':'Account Verified',
+                    'status': 200,
+                    'message': 'Account Verified',
                     'data': {}
-                })
+                }, status=status.HTTP_200_OK)
+            
             return Response({
-                'status':400,
-                'message': 'Something went wrong',
+                'status': 400,
+                'message': 'Invalid data',
                 'data': serializer.errors
-            })
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        except KeyError as ke:
+            return Response({
+                'status': 500,
+                'message': 'Missing key in serializer data',
+                'data': str(ke)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
         except Exception as e:
-            print(e)
+            return Response({
+                'status': 500,
+                'message': 'Internal server error',
+                'data': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

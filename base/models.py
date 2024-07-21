@@ -38,7 +38,7 @@ class User(AbstractUser):
     phone = models.CharField(max_length=10, help_text="Enter a 10-digit contact number")
     name = models.CharField(max_length=600, blank=True, editable=False)
     is_email_verified = models.BooleanField(default=False)
-    otp_email = models.CharField(max_length=6, null=True, blank=True)
+    otp = models.CharField(max_length=6, null=True, blank=True)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
